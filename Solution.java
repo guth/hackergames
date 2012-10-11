@@ -130,8 +130,8 @@ public class Solution
 			int rDiff = robber.r - cops[k].r;
 			int cDiff = robber.c - cops[k].c;
 
-			int dr = rDiff/Math.abs(rDiff);
-			int dc = cDiff/Math.abs(cDiff);
+			int dr = rDiff == 0 ? 0 : rDiff/Math.abs(rDiff);
+			int dc = cDiff == 0 ? 0 : cDiff/Math.abs(cDiff);
 
 			if(Math.abs(rDiff) > Math.abs(cDiff))
 				ret[k] = new Point(cops[k].r+dr, cops[k].c);
