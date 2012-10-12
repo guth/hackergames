@@ -16,46 +16,179 @@ public class Solution
 	private final int C = 20;
 	private final int NUM_COPS = 3;
 
-	int[] robberDR = {-1, -1, -1, 0, 0,  1, 1, 1};
-	int[] robberDC = {-1,  0,  1,-1, 1, -1, 0, 1};
+	private final int[] robberDR = {-1, -1, -1, 0, 0,  1, 1, 1};
+	private final int[] robberDC = {-1,  0,  1,-1, 1, -1, 0, 1};
 
-	int[] copDR = {-1,  0, 0, 1};
-	int[] copDC = { 0, -1, 1, 0};
-	char player;
-	Point robber;
-	Point[] cops;
+	private final int[] copDR = {-1,  0, 0, 1};
+	private final int[] copDC = { 0, -1, 1, 0};
+	private final int DEPTH = 5;
+	private char PLAYER;
 
 	public void go()
 	{
 		Scanner s = new Scanner(System.in);
 		
-		player = s.next().trim().charAt(0);
+		char player = s.next().trim().charAt(0);
+		PLAYER = player;
 		//System.err.println("Player: " + player);
 		
-		robber = new Point(s.nextInt(), s.nextInt());
+		Point robber = new Point(s.nextInt(), s.nextInt());
 		//System.err.println("Robber is at: " + "(" + robber.r + ", " + robber.c + ")");
-		cops = new Point[NUM_COPS];
+		Point[] cops = new Point[NUM_COPS];
 		for(int k=0; k<NUM_COPS; k++)
 		{
 			cops[k] = new Point(s.nextInt(), s.nextInt());
 			//System.err.println("Cop #" + k + ": (" + cops[k].r + ", " + cops[k].c + ")");
 		}
 
+		alphabeta(robber, cops, DEPTH, Integer.MIN_VALUE, Integer.MAX_VALUE, player);
+
 		if(player == ROBBER)
 		{
-			Point p = doRobberMove();
+			Point p = globalBestRobber;
 			System.out.println(p.r + " " + p.c);
 		}
 		else if(player == COP)
 		{
-			Point[] p = doCopMove();
+			Point[] p = globalBestCops;
 			System.out.printf("%d %d %d %d %d %d\n",
 						p[0].r, p[0].c, p[1].r, p[1].c, p[2].r, p[2].c);
+		}
+
+		// if(player == ROBBER)
+		// {
+		// 	Point p = doRobberMove(robber, cops);
+		// 	System.out.println(p.r + " " + p.c);
+		// }
+		// else if(player == COP)
+		// {
+		// 	Point[] p = doCopMove(robber, cops);
+		// 	System.out.printf("%d %d %d %d %d %d\n",
+		// 				p[0].r, p[0].c, p[1].r, p[1].c, p[2].r, p[2].c);
+		// }
+	}
+/*
+	function alphabeta(node, depth, α, β, Player)         
+	    if  depth = 0 or node is a terminal node
+	        return the heuristic value of node
+	    if  Player = MaxPlayer
+	        for each child of node
+	            α := max(α, alphabeta(child, depth-1, α, β, not(Player) ))     
+	            if β ≤ α
+	                break                             (* Beta cut-off *)
+	        return α
+	    else
+	        for each child of node
+	            β := min(β, alphabeta(child, depth-1, α, β, not(Player) ))     
+	            if β ≤ α
+	                break                             (* Alpha cut-off *)
+	        return β
+	
+	(* Initial call *)
+	alphabeta(origin, depth, -infinity, +infinity, MaxPlayer)
+*/
+	private Point globalBestRobber = null;
+	private Point[] globalBestCops = null;
+	private int alphabeta(Point robber, Point[] cops, int depth,
+							int alpha, int beta, char player)
+	{
+		char otherPlayer = (player == COP) ? ROBBER : COP;
+		int one = (player == PLAYER) ? 1 : -1;
+
+		if(depth == 0 || (player == COP && robberIsCaught(robber, cops)))
+		{
+			int val = eval(player, robber, cops);
+			return val;
+		}
+
+		Point bestRobber = null;
+		Point[] bestCops = null;
+		if(player == PLAYER) // max player
+		{
+			if(player == COP)
+			{
+				List<Point[]> newCopsList = getNextCopStates(cops);
+				for(Point[] newCops : newCopsList)
+				{
+					int temp = alphabeta(robber, newCops, depth-1, alpha, beta, otherPlayer);
+					if(temp > alpha)
+					{
+						alpha = temp;
+						bestCops = newCops;
+					}
+					if(temp == alpha && bestCops == null)
+						bestCops = newCops;
+					if(beta <= alpha)
+						break;
+				}
+			}
+			else if(player == ROBBER)
+			{
+				List<Point> newRobberList = getNextRobberStates(robber);
+				for(Point newRobber : newRobberList)
+				{
+					int temp = alphabeta(newRobber, cops, depth-1, alpha, beta, otherPlayer);
+					if(temp > alpha)
+					{
+						alpha = temp;
+						bestRobber = newRobber;
+					}
+					if(temp == alpha && bestRobber == null)
+						bestRobber = newRobber;
+					if(beta <= alpha)
+						break;
+				}
+			}
+			globalBestCops = bestCops;
+			globalBestRobber = bestRobber;
+			return alpha;
+		}
+		else // min player
+		{
+			if(otherPlayer == COP)
+			{
+				List<Point[]> newCopsList = getNextCopStates(cops);
+				for(Point[] newCops : newCopsList)
+				{
+					int temp = alphabeta(robber, newCops, depth-1, alpha, beta, otherPlayer);
+
+					if(temp < beta)
+					{
+						beta = temp;
+						bestCops = newCops;
+					}
+					if(temp == beta && bestCops == null)
+						bestCops = newCops;
+					if(beta <= alpha)
+						break;
+				}
+			}
+			else if(otherPlayer == ROBBER)
+			{
+				List<Point> newRobberList = getNextRobberStates(robber);
+				for(Point newRobber : newRobberList)
+				{
+					int temp = alphabeta(newRobber, cops, depth-1, alpha, beta, otherPlayer);
+					beta = Math.min(beta, temp);
+					if(temp < beta)
+					{
+						beta = temp;
+						bestRobber = newRobber;
+					}
+					if(temp == beta && bestRobber == null)
+						bestRobber = newRobber;
+					if(beta <= alpha)
+						break;
+				}
+			}
+			globalBestCops = bestCops;
+			globalBestRobber = bestRobber;
+			return beta;
 		}
 	}
 
 	// Moves to a random point that's not a cop
-	private Point doRobberMove()
+	private Point doRobberMove(Point robber, Point[] cops)
 	{
 		Point ret = null;
 		loop: while(ret == null)
@@ -84,13 +217,9 @@ public class Solution
 	}
 
 	// Collectively moves towards the robber
-	private Point[] doCopMove()
+	private Point[] doCopMove(Point robber, Point[] cops)
 	{
 		Point[] ret = new Point[NUM_COPS];
-
-		
-		Random r = new Random();
-
 
 		for(int k=0; k<NUM_COPS; k++)
 		{
@@ -130,13 +259,13 @@ public class Solution
 	}
 
 	// Always higher value for the current player.
-	private int eval()
+	private int eval(char player, Point robber, Point[] cops)
 	{
-		ClosestData data = getClosestData();
+		ClosestData data = getClosestData(robber, cops);
 		int diff = data.numCopsCloser - data.numRobberCloser;
 		
 		// High is good for robber, bad for cops
-		int distToRobber = minCopDist(robber.r, robber.c);
+		int distToRobber = minCopDist(cops, robber.r, robber.c);
 
 		if(player == ROBBER)
 		{
@@ -151,7 +280,7 @@ public class Solution
 		return diff;
 	}
 
-	private List<Point> getNextRobberStates()
+	private List<Point> getNextRobberStates(Point robber)
 	{
 		List<Point> ret = new ArrayList<Point>();
 		for(int i=0; i<robberDR.length; i++)
@@ -166,7 +295,7 @@ public class Solution
 		return ret;
 	}
 
-	private List<Point[]> getNextCopStates()
+	private List<Point[]> getNextCopStates(Point[] cops)
 	{
 		List<Point[]> ret = new ArrayList<Point[]>();
 		int N = copDR.length;
@@ -180,14 +309,24 @@ public class Solution
 					newCops[0] = new Point(cops[0].r+copDR[i], cops[0].c+copDC[i]);
 					newCops[1] = new Point(cops[1].r+copDR[j], cops[1].c+copDC[j]);
 					newCops[2] = new Point(cops[2].r+copDR[k], cops[2].c+copDC[k]);
-					ret.add(newCops);
+					boolean allInBounds = true;
+					for(int a=0; a<NUM_COPS; a++)
+					{
+						if(!isInBounds(newCops[a]))
+						{
+							allInBounds = false;
+							break;
+						}
+					}
+					if(allInBounds)
+						ret.add(newCops);
 				}
 			}
 		}
 		return ret;
 	}
 
-	private ClosestData getClosestData()
+	private ClosestData getClosestData(Point robber, Point[] cops)
 	{
 		char[][] matrix = new char[R][C];
 		int numRobber = 0;
@@ -196,8 +335,8 @@ public class Solution
 		{
 			for(int c=0; c<C; c++)
 			{
-				int rDist = robberDist(r, c);
-				int cDist = minCopDist(r, c);
+				int rDist = robberDist(robber, r, c);
+				int cDist = minCopDist(cops, r, c);
 
 				if(rDist < cDist)
 				{
@@ -218,34 +357,44 @@ public class Solution
 		return new ClosestData(matrix, numRobber, numCop);
 	}
 
-	private int copDist(int ci, int r, int c)
+	private int copDist(Point cop, int r, int c)
 	{
-		return (Math.abs(cops[ci].r-r) + Math.abs(cops[ci].c-c));
+		return (Math.abs(cop.r-r) + Math.abs(cop.c-c));
 	}
 
-	private int minCopDist(int r, int c)
+	private int minCopDist(Point[] cops, int r, int c)
 	{
 		int min = Integer.MAX_VALUE;
 		for(int k=0; k<NUM_COPS; k++)
 		{
-			min = Math.min(min, copDist(k, r, c));
+			min = Math.min(min, copDist(cops[k], r, c));
 		}
 		return min;
 	}
 
-	private int robberDist(int r, int c)
+	private int robberDist(Point robber, int r, int c)
 	{
 		return Math.max(Math.abs(robber.r-r), Math.abs(robber.c-c));
 	}
 
 	private boolean isInBounds(int r, int c)
 	{
-		return (r >= 0 && c >= 0 && r < 20 && c < 20);
+		return (r >= 0 && c >= 0 && r < R && c < C);
 	}
 
 	private boolean isInBounds(Point p)
 	{
 		return isInBounds(p.r, p.c);
+	}
+
+	private boolean robberIsCaught(Point robber, Point[] cops)
+	{
+		for(Point cop : cops)
+		{
+			if(cop.r == robber.r && cop.c == robber.c)
+				return true;
+		}
+		return false;
 	}
 
 	public class Point
