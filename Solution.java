@@ -23,14 +23,25 @@ public class Solution
 	private final int[] copDC = {0,  0, -1, 1, 0};
 	private final int DEPTH = 6;
 	private char PLAYER;
+	private char OPPONENT;
+	
 	private boolean DEBUG = false;
+	
 	public void go()
 	{
+		int[] a;
+		Arrays.sort(a)
+		
+		List<Integer> b;
+		Collections.sort(b);
+	
 		Scanner s = new Scanner(System.in);
 
 		char player = s.next().trim().charAt(0);
 		PLAYER = player;
-		//System.err.println("Player: " + player);
+		OPPONENT = (PLAYER == COP) ? ROBBER : COP;
+		//System.err.println("Player: " + PLAYER);
+		//System.err.println("Opponent: " + OPPONENT);
 
 		Point robber = new Point(s.nextInt(), s.nextInt());
 		//System.err.println("Robber is at: " + "(" + robber.r + ", " + robber.c + ")");
@@ -45,8 +56,9 @@ public class Solution
 
 		if(player == ROBBER)
 		{
-			alphabeta(robber, cops, DEPTH, Integer.MIN_VALUE, Integer.MAX_VALUE, player);
-			Point p = globalBestRobber;
+			//alphabeta(robber, cops, DEPTH, Integer.MIN_VALUE, Integer.MAX_VALUE, player);
+			//Point p = globalBestRobber;
+			Point p = doRobberMove(robber, cops);
 			System.out.println(p.r + " " + p.c);
 		}
 		else if(player == COP)
@@ -95,7 +107,8 @@ public class Solution
 	{
 		char otherPlayer = (player == COP) ? ROBBER : COP;
 
-		if(depth == 0 || (player == COP && robberIsCaught(robber, cops)))
+		//if(depth == 0 || (player == COP && robberIsCaught(robber, cops)))
+		if(depth == 0 || robberIsCaught(robber, cops))
 		{
 			int val = eval(player, robber, cops);
 			return val;
@@ -143,7 +156,7 @@ public class Solution
 			globalBestRobber = bestRobber;
 			return alpha;
 		}
-		else // min player
+		else //otherplayer == PLAYER // min player
 		{
 			if(otherPlayer == COP)
 			{
@@ -190,6 +203,57 @@ public class Solution
 	// Moves to a random point that's not a cop
 	private Point doRobberMove(Point robber, Point[] cops)
 	{
+		List<Point> newRobberList = getNextRobberStates(robber);
+		Point best = null;
+		int max = -1;
+		for(Point newRobber : newRobberList)
+		{
+			if(robberIsCaught(newRobber, cops))
+				continue;
+			if(minCopDist(cops, newRobber.r, newRobber.c) < 2)
+				continue;
+			ClosestData data = getClosestData(newRobber, cops);
+			int val = data.numRobberCloser;
+			if(val > max)
+			{
+				max = val;
+				best = newRobber;
+			}
+		}
+		
+		
+		if(best == null)
+		{
+			for(Point newRobber : newRobberList)
+			{			
+				if(robberIsCaught(newRobber, cops))
+					continue;
+				ClosestData data = getClosestData(newRobber, cops);
+				int val = data.numRobberCloser;
+				if(val > max)
+				{
+					max = val;
+					best = newRobber;
+				}
+			}
+		}
+		
+		if(best == null)
+		{
+			for(Point newRobber : newRobberList)
+			{
+				ClosestData data = getClosestData(newRobber, cops);
+				int val = data.numRobberCloser;
+				if(val > max)
+				{
+					max = val;
+					best = newRobber;
+				}
+			}
+		}
+		
+		return best;
+	/*
 		Point ret = null;
 		loop: while(ret == null)
 		{
@@ -214,6 +278,7 @@ public class Solution
 			}
 		}
 		return ret;
+		*/
 	}
 
 	// Collectively moves towards the robber
@@ -265,13 +330,21 @@ public class Solution
 		
 		if(player == COP)
 		{
-			return data.numCopsCloser;
+			int totalDistFromRobber = 0;
+			for(int k=0; k<NUM_COPS; k++)
+			{
+				totalDistFromRobber += copDist(cops[k], robber.r, robber.c);
+			}
+			int avgDistFromRobber = totalDistFromRobber / NUM_COPS;
+			return 1000-totalDistFromRobber;
 		}
 		else //if(player == ROBBER)
 		{
 			if(robberIsCaught(robber, cops))
-				return -1;
-			int distFromCenter = Math.abs(robber.r-R/2)+Math.abs(robber.c-C/2);
+				return Integer.MIN_VALUE;
+			//int distFromCenter = Math.abs(robber.r-R/2)+Math.abs(robber.c-C/2);
+			
+			//return totalDistFromCops;
 			return data.numRobberCloser;
 		}
 //		int diff = data.numCopsCloser - data.numRobberCloser;
