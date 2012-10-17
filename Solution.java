@@ -33,6 +33,8 @@ public class Solution
 	 * The next six integers is the row and columns of each of the cops.
 	 * If the player is the cops, then the six integers are the current positions of their cops.
 	 * If the player is the robber, then the positions are the last known locations of the cops.
+	 * Output is the next move of the current player. One (row, column) pair for the robber,
+	 * or three for each of the cops.
 	 */
 	public void go()
 	{
